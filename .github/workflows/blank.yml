@@ -1,0 +1,99 @@
+*
+Adapted from https://gist.github.com/adminy/5e80c40592b135e6d7fd8e6bd88c825a
+Use something like https://gist.github.com/abir-taheer/0d3f1313def5eec6b78399c0fb69e4b1#file-instagram-follower-following-js to get the list of
+users to unfollow.
+Instructions:
+1. Open: https://www.instagram.com/{YOUR_USERNAME}/following/ in your web browser <-- replace
+{YOUR_USERNAME} with your username
+2. Edit the `usersToUnfollow` array below to contain the usernames of the people you want
+to unfollow.
+3. Open the dev console and paste the code below.
+4. The code will stop once you've unfollowed 140 people, or if there is no one else to
+unfollow. If you want to unfollow more people, repeat steps 1-3 at least 24 hours later so that you
+don't get your account banned.
+Use at your own risk! I'm not responsible for any bans that may occur.
+*/
+
+var usersToUnfollow = [
+  // TODO: Fill in the usernames of the people you want to unfollow.
+  "username1",
+  "username2",
+];
+
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1) + min); // min and max
+
+async function sleepRand() {
+  const ms = randInt(2000, 4000);
+  console.log("sleeping for ", ms);
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sleepOneMin() {
+  console.log("sleeping for 1 min");
+  await new Promise((resolve) => setTimeout(resolve, 60000));
+}
+
+let numUnfollows = 0;
+
+async function processFollowerDiv(followerDiv) {
+  let username = "";
+  followerDiv.querySelectorAll("a").forEach((a) => {
+    if (a.hasAttribute("href")) {
+      temp = a.href.split("/").slice(-2)[0];
+      if (temp != "") {
+        username = temp;
+      }
+    }
+  });
+  if (usersToUnfollow.indexOf(username) > -1) {
+    console.log("UNFOLLOWING: ", username);
+    const followingButton = followerDiv.querySelectorAll("button")[0];
+    followingButton.click();
+    await sleepRand();
+    // Confirm that we wan't to unfollow.
+    const confirmDialog = document.querySelectorAll('[role="dialog"]')[2];
+    const unfollowConfirm = confirmDialog.querySelectorAll("button")[0];
+    unfollowConfirm.click();
+    numUnfollows++;
+    usersToUnfollow = usersToUnfollow.filter((item) => item !== username);
+    await sleepOneMin();
+  }
+}
+
+function findItemContainer(parentNode) {
+  // Recurse through the dialog node find the node one with at least 10 elements.
+  const children = parentNode.children;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.children.length >= 10) {
+      return child;
+    }
+    const result = findItemContainer(child);
+    if (result) {
+      return result;
+    }
+  }
+}
+
+async function main() {
+  const dialogNode = document.querySelectorAll('[role="dialog"]')[0];
+  const itemContainer = findItemContainer(dialogNode);
+
+  while (usersToUnfollow.length > 0) {
+    console.log("usersToUnfollow", usersToUnfollow.length);
+
+    const folllowerNodes = itemContainer.children;
+    for (let followerDiv of folllowerNodes) {
+      await processFollowerDiv(followerDiv);
+    }
+    if (numUnfollows > 140) {
+      alert("You've unfollowed too many people. Please wait 24 hours before running this script again.");
+      return;
+    }
+    await sleepRand();
+    // Scroll to the end of the page.
+    folllowerNodes[folllowerNodes.length - 1].scrollIntoView(true);
+  }
+}
+
+await main();
